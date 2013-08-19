@@ -46,15 +46,25 @@ def get_comments(subreddit_='videos', limit_=100):
     """ Reddit object's get_comments() wrapper """
     return REDDIT.get_comments(subreddit=subreddit_, limit=limit_)
 
-def contains_time(comment):
-    """ Parses through the comment object """
-    if (TIME_REGEX.match(comment.body)):
-        print "Found one!"
-        LOGGER.info("Matched ==> %s" % TIME_REGEX.match(comment.body).groups())
-        LOGGER.info(comment.id + " |||| " + time.ctime(comment.created_utc)
-              + " |||| " + comment.body)
-        return True
-    return False
+def passes_filter(comment):
+    """
+    Parses through the comment object's html body to see if it contains the
+    regex we are looking for. Also does some additional checks to improve
+    accuracy since a simple regex is not enough.
+
+    Returns true if the comment passes, else false
+    """
+    if (not TIME_REGEX.match(comment.body)):
+        return False
+
+
+    return True
+
+def get_submission(comment):
+    """
+    Returns a submission object for the provided comment object
+    """
+
 
 def main():
     print "Started"
@@ -64,21 +74,15 @@ def main():
     print "Running"
     while True:
         try:
-            count = 0
-            unique = 0
             comments = get_comments()
             for comment in comments:
-                count +=1
-                if comment.id not in read and contains_time(comment):
-                    unique += 1
+                if comment.id not in read and passes_filter(comment):
                     read.append(comment.id)
-            print "Unique: " + str(unique)
             print "read size: " + str(len(read))
-            print "Count: " + str(count)
             print "==========================================================="
             time.sleep(30)
         except (HTTPError, URLError) as e:
-            time.sleep(180) # wait 2 minutes on error
+            time.sleep(180) # wait 3 minutes on error
         except KeyboardInterrupt as e:
             LOGGER.info("lazyassbot has been interrupted")
     print "Stopped"
