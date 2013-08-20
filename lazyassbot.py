@@ -12,12 +12,17 @@ import logging
 import time
 import re
 from collections import deque
+from urllib2 import HTTPError, URLError
 
 import praw
 
 # Constants
-TIME_REGEX = re.compile(r'^.*?(\d{0,2}\:\d{2}).*$')
+TIME_REGEX = re.compile(r'^.*?(?:[\W ]|^)(\d{0,2}\:\d{2})(?:\W|ish|$)'
+                         '(?!.?(?:am|pm|morning|afternoon)\W).*$',
+                         re.IGNORECASE|re.MULTILINE)
 START_TIME = time.time()
+
+MATCH_ALL = re.compile(r'^.*?(\d{0,2}\:\d{2}).*$', re.IGNORECASE|re.MULTILINE)
 
 # Configure some basic logging
 logging.basicConfig(filename='lazyassbot.log',
@@ -48,23 +53,48 @@ def get_comments(subreddit_='videos', limit_=100):
 
 def passes_filter(comment):
     """
-    Parses through the comment object's html body to see if it contains the
+    Parses through the comment object's text to see if it contains the
     regex we are looking for. Also does some additional checks to improve
     accuracy since a simple regex is not enough.
 
     Returns true if the comment passes, else false
     """
+    if (MATCH_ALL.match(comment.body)):
+        print "weak find!"
+        log_comment(comment, extra="#######WEAK#######")
+        
     if (not TIME_REGEX.match(comment.body)):
         return False
 
+    time = TIME_REGEX.match(comment.body).group(1)
 
+    print "strong find!"
+    log_comment(comment)
     return True
+
+def log_comment(comment, extra=None):
+    submission = comment.submission
+
+    LOGGER.info("")
+    if extra:
+        LOGGER.info(extra)
+    LOGGER.info("Matched ==> %s" % TIME_REGEX.match(comment.body).groups())
+    LOGGER.info("Comment id: %s" % comment.id)
+    LOGGER.info("Time created: %s" % time.ctime(comment.created_utc))
+    LOGGER.info("Root: %s" % comment.is_root)
+    LOGGER.info("Likes: %s" % comment.likes)
+    LOGGER.info("Submission id: %s" % submission.id)
+    LOGGER.info("Submission title: %s" % submission.title)
+    LOGGER.info("Submission created: %s" %  time.ctime(submission.created_utc))
+    LOGGER.info("Submission domain: %s" % submission.domain)
+    LOGGER.info("Submission url: %s" % submission.url)
+    LOGGER.info("Comment body: %s" % comment.body)
+    LOGGER.info("")
 
 def get_submission(comment):
     """
     Returns a submission object for the provided comment object
     """
-
 
 def main():
     print "Started"
@@ -72,19 +102,28 @@ def main():
     login()
     read = deque(maxlen=200)
     print "Running"
+    total_time = 0
     while True:
         try:
+            uniques = 0
             comments = get_comments()
             for comment in comments:
-                if comment.id not in read and passes_filter(comment):
+                if comment.id not in read:
+                    uniques += 1
                     read.append(comment.id)
-            print "read size: " + str(len(read))
-            print "==========================================================="
+                    passes_filter(comment)
+            if uniques >= 25:
+                print "Uniques surpassed 25: %d" % uniques
             time.sleep(30)
         except (HTTPError, URLError) as e:
+            LOGGER.info("!!!!! HTTP/URL Error was raised: %s" % e.strerror)
             time.sleep(180) # wait 3 minutes on error
         except KeyboardInterrupt as e:
             LOGGER.info("lazyassbot has been interrupted")
+        if (((time.time() - START_TIME) / 60) > (total_time + 10)):
+            total_time += 10
+            print "Time passed: %d minutes" % total_time
+
     print "Stopped"
 
 if __name__ == '__main__':
