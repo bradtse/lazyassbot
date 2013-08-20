@@ -24,8 +24,8 @@ import praw
 # Constants
 READ_RECORD = 'recently_read.pkl'
 BOT_NAME = u'lazyassbot'
-BOT_FAQ = 'http://www.reddit.com/r/btsebots/wiki/faq'
-BOT_FEEDBACK = 'http://www.reddit.com/r/btsebots/submit'
+BOT_FAQ = 'http://www.reddit.com/r/lazyassbot/wiki/faq'
+BOT_FEEDBACK = 'http://www.reddit.com/r/lazyassbot/submit'
 FOOTER = u'''\n
 | *Incorrect? Downvote me!* | *Currently in beta* | [*FAQ*]({0}) | 
 [*Report Bug/Feedback*]({1}) |'''.format(BOT_FAQ, BOT_FEEDBACK)
@@ -39,6 +39,9 @@ START_TIME = time.time()
 YT_REGEX = re.compile('^(?:https?://)?(?:www\.)?(?:youtu\.be/|youtube\.com'
             '(?:/embed/|/v/|/watch\?v=|/watch\?.+&v=))([\w-]{11})(?:.+)?$')
 YT_GDATA = 'http://gdata.youtube.com/feeds/api/videos/{0}?alt=json'
+
+LINK_REGEX = re.compile('(?:https?://)?(?:www\.)?(?:youtu\.be/|youtube\.com)',
+                        re.MULTILINE)
 
 MATCH_ALL = re.compile(r'^.*?(\d{0,2}\:\d{2}).*$', re.IGNORECASE|re.MULTILINE)
 
@@ -109,6 +112,11 @@ def handle_comment(comment):
         return 
 
     log_comment(comment)
+
+    # This is not the best way to do it, but should for for now
+    if (LINK_REGEX.search(comment.body)):
+        return
+   
     url = HTMLParser.HTMLParser().unescape(comment.submission.url)
     youtube_id = get_youtube_id(url)
     time = TIME_REGEX.match(comment.body).group(1)
@@ -150,23 +158,22 @@ def log_comment(comment):
     LOGGER.info("Submission domain: %s" % submission.domain)
     LOGGER.info("Submission url: %s" % submission.url)
     LOGGER.info("Comment body: %s" % comment.body)
-    LOGGER.info("")
+
+def get_record():
+    try:
+        with open(READ_RECORD, 'rb') as f:
+            print "Unpickle!"
+            return pickle.load(f)
+    except IOError as e:
+        LOGGER.info("Pickle file does not exist yet")
+        return deque(maxlen=200)
 
 def main():
     print "Started"
     LOGGER.info("lazyassbot has started!")
     login()
-
-    read = deque(maxlen=200)
-    try:
-        with open(READ_RECORD, 'rb') as f:
-            print "Unpickle!"
-            read = pickle.load(f)
-    except IOError as e:
-        LOGGER.info("Pickle file does not exist yet")
-
+    read = get_record() 
     print "Running"
-
     while True:
         try:
             comments = get_comments()
@@ -175,6 +182,10 @@ def main():
                     handle_comment(comment)
                     read.append(comment.id)
             time.sleep(30)
+        except praw.errors.RateLimitExceeded as e:
+            print "Sleeping for %s" % e.sleep_time
+            LOGGER.info("Sleeping for %s" % e.sleep_time)
+            time.sleep(e.sleep_time)
         except (HTTPError, URLError, requests.ConnectionError) as e:
             LOGGER.info("!!!!! HTTP/URL Error was raised: %s" % e.strerror)
             print "Connection error!"
