@@ -22,6 +22,9 @@ TIME_REGEX = re.compile(r'^.*?(?:[\W ]|^)(\d{0,2}\:\d{2})(?:\W|ish|$)'
                          re.IGNORECASE|re.MULTILINE)
 START_TIME = time.time()
 
+YT_REGEX = re.compile('^(?:https?://)?(?:www\.)?(?:youtu\.be/|youtube\.com'
+            '(?:/embed/|/v/|/watch\?v=|/watch\?.+&v=))([\w-]{11})(?:.+)?$')
+
 MATCH_ALL = re.compile(r'^.*?(\d{0,2}\:\d{2}).*$', re.IGNORECASE|re.MULTILINE)
 
 # Configure some basic logging
@@ -61,24 +64,24 @@ def passes_filter(comment):
     """
     if (MATCH_ALL.match(comment.body)):
         print "weak find!"
-        log_comment(comment, extra="#######WEAK#######")
-        
+        log_comment(comment, match=MATCH_ALL.match(comment.body).group(1), extra="#######WEAK#######")
+
     if (not TIME_REGEX.match(comment.body)):
         return False
 
     time = TIME_REGEX.match(comment.body).group(1)
 
     print "strong find!"
-    log_comment(comment)
+    log_comment(comment, match=time)
     return True
 
-def log_comment(comment, extra=None):
+def log_comment(comment, match=None, extra=None):
     submission = comment.submission
 
     LOGGER.info("")
     if extra:
         LOGGER.info(extra)
-    LOGGER.info("Matched ==> %s" % TIME_REGEX.match(comment.body).groups())
+    LOGGER.info("Matched ==> %s" % match)
     LOGGER.info("Comment id: %s" % comment.id)
     LOGGER.info("Time created: %s" % time.ctime(comment.created_utc))
     LOGGER.info("Root: %s" % comment.is_root)
