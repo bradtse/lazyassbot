@@ -3,6 +3,7 @@
 #################
 login.txt
 lazyassbot.log*
+*.pkl
 
 #################
 ## Eclipse
