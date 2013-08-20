@@ -24,6 +24,7 @@ START_TIME = time.time()
 
 YT_REGEX = re.compile('^(?:https?://)?(?:www\.)?(?:youtu\.be/|youtube\.com'
             '(?:/embed/|/v/|/watch\?v=|/watch\?.+&v=))([\w-]{11})(?:.+)?$')
+YT_GDATA = 'http://gdata.youtube.com/feeds/api/videos/{0}?alt=json'
 
 MATCH_ALL = re.compile(r'^.*?(\d{0,2}\:\d{2}).*$', re.IGNORECASE|re.MULTILINE)
 
