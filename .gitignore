@@ -2,7 +2,7 @@
 ## Project Specific
 #################
 login.txt
-lazyassbot.log*
+logs/
 *.pkl
 
 #################
