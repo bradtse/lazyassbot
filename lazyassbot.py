@@ -32,7 +32,7 @@ FOOTER = u'''\n
 | *Incorrect? Downvote me!* | *Currently in beta* | [*FAQ*]({0}) | 
 [*Report Bug/Feedback*]({1}) |'''.format(BOT_FAQ, BOT_FEEDBACK)
 
-JIFFY_REGEX = re.compile(r'^.*?Jiffy!.*$')
+JIFFY_REGEX = re.compile(r'^.*?(?:Jiffy!)|(?:/u/JiffyBot).*$', re.IGNORECASE|re.MULTILINE)
 
 # regex used to match against the comment's text
 TIME_REGEX = re.compile(r'^.*?(?:[\W ]|^)(\d{0,2}\:\d{2})(?:\W|ish|$)'
@@ -47,7 +47,7 @@ YT_GDATA = 'http://gdata.youtube.com/feeds/api/videos/{0}?alt=json'
 
 # Matches any kind of link
 # This needs to be fixed to account for more dns names
-LINK_REGEX = re.compile('(?:https?://)?(?:www\.)?.*?\.com',
+LINK_REGEX = re.compile('(?:https?://)|(?:www\.)|(?:youtu\.be/|\.com).*?',
                         re.MULTILINE)
 
 # Configure some basic logging
@@ -114,9 +114,9 @@ def is_unique(comment):
     The main purpose of this is so that no one messes with the bot.
     Returns True if the bot has not posted yet, False otherwise.
     """
-    if comment.is_root is False:
+    if not comment.is_root:
         current = REDDIT.get_info(thing_id=comment.parent_id)
-        while current.is_root is False:
+        while not current.is_root:
             if current.author.name == BOT_NAME:
                 return False
             current = REDDIT.get_info(thing_id=current.parent_id)
@@ -152,7 +152,7 @@ def handle_comment(comment):
         LOGGER.info("Already contains a link...skipping!")
         return
 
-    if is_unique(comment) is False:
+    if not is_unique(comment):
         print "Stop messing with lazybot!"
         LOGGER.info("Bot already posted in this subtree...skipping!")
         return
