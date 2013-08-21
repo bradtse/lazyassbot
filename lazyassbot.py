@@ -52,7 +52,7 @@ LINK_REGEX = re.compile('(?:https?://)|(?:www\.)|(?:youtu\.be/|\.com).*?',
 
 # Configure some basic logging
 logging.basicConfig(filename='logs/lazyassbot-{0}.log'.format(time.ctime().replace(' ', '-')),
-                    format='%(asctime)s :: %(levelname)s :: %(module)s :: %(message)s',
+                    format='%(asctime)s :: %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     filemode='w',
                     level=logging.INFO)
@@ -86,11 +86,15 @@ def get_youtube_id(url):
     """
     return YT_REGEX.match(url).group(1) if YT_REGEX.match(url) else None
 
+def get_youtube_json(yt_id):
+    """ Returns the youtube video's metadata in json format """
+    return requests.get(YT_GDATA.format(yt_id)).json()
+
 def get_video_info(yt_id):
     """ Returns the video duration, url for the provided youtube id. """
-    r = requests.get(YT_GDATA.format(yt_id))
-    duration = r.json()['entry']['media$group']['yt$duration']['seconds']
-    url = r.json()['entry']['link'][0]['href']
+    j = get_youtube_json(yt_id)
+    duration = j['entry']['media$group']['yt$duration']['seconds']
+    url = j['entry']['media$group']['media$player'][0]['url']
     return duration, url
 
 def time_to_seconds(time):
@@ -100,6 +104,9 @@ def time_to_seconds(time):
     """
     m,s = [int(x) if x != '' else 0 for x in time.split(':')]
     return 60*m + s
+
+def get_final_url(url, seconds):
+    return "{0}&t={1}".format(url, seconds)
 
 def build_reply(time, new_url):
     """
@@ -159,6 +166,7 @@ def handle_comment(comment):
 
     orig_url = HTMLParser.HTMLParser().unescape(comment.submission.url)
     youtube_id = get_youtube_id(orig_url)
+    LOGGER.info("Youtube id: %s" % youtube_id)
     if youtube_id is None:
         LOGGER.info("Not a valid youtube link...skipping!")
         return 
@@ -175,7 +183,7 @@ def handle_comment(comment):
     else:
         comment_secs -= 2
 
-    final_url = "{0}&t={1}".format(new_url, comment_secs)
+    final_url = get_final_url(new_url, comment_secs)
     LOGGER.info("Final url: %s" % final_url)
 
     reply = build_reply(time, final_url)
