@@ -114,9 +114,9 @@ def is_unique(comment):
     The main purpose of this is so that no one messes with the bot.
     Returns True if the bot has not posted yet, False otherwise.
     """
-    if not comment.is_root:
+    if comment.is_root is False:
         current = REDDIT.get_info(thing_id=comment.parent_id)
-        while current.is_root == False:
+        while current.is_root is False:
             if current.author.name == BOT_NAME:
                 return False
             current = REDDIT.get_info(thing_id=current.parent_id)
@@ -135,7 +135,7 @@ def handle_comment(comment):
     if comment.author.name == BOT_NAME:
         return 
 
-    if not TIME_REGEX.match(comment.body):
+    if TIME_REGEX.match(comment.body) is None:
         return 
     time = TIME_REGEX.match(comment.body).group(1)
 
@@ -152,14 +152,14 @@ def handle_comment(comment):
         LOGGER.info("Already contains a link...skipping!")
         return
 
-    if not is_unique(comment):
+    if is_unique(comment) is False:
         print "Stop messing with lazybot!"
         LOGGER.info("Bot already posted in this subtree...skipping!")
         return
 
     orig_url = HTMLParser.HTMLParser().unescape(comment.submission.url)
     youtube_id = get_youtube_id(orig_url)
-    if not youtube_id:
+    if youtube_id is None:
         LOGGER.info("Not a valid youtube link...skipping!")
         return 
 
@@ -232,26 +232,29 @@ def main():
                     handle_comment(comment)
             time.sleep(30)
         except praw.errors.RateLimitExceeded as e:
-            print "Sleeping for %s" % e.sleep_time
-            LOGGER.info("Sleeping for %s" % e.sleep_time)
+            print "RateLimiteExceeded...sleeping for %s" % e.sleep_time
+            LOGGER.info("RateLimitExceeded...sleeping for %s" % e.sleep_time)
             time.sleep(e.sleep_time)
         except (requests.ConnectionError, requests.HTTPError) as e:
             LOGGER.info("")
-            LOGGER.info("!!!!!requests connection/Http Error was raised")
-            print "requests network error!"
+            LOGGER.info("!!!!! requests connection/Http Error was raised")
+            print "requests network error...going to sleep for 3 minutes"
             time.sleep(180) # wait 3 minutes on error
         except (HTTPError, URLError) as e:
             LOGGER.info("")
-            LOGGER.info("!!!!!urllib2 HTTP/URL Error was raised")
-            print "urllib2 network error!"
+            LOGGER.info("!!!!! urllib2 HTTP/URL Error was raised")
+            print "urllib2 network error...going to sleep for 3 minutes"
             time.sleep(180) # wait 3 minutes on error
         except KeyboardInterrupt as e:
             LOGGER.info("")
-            LOGGER.info("!!!!!lazyassbot has been interrupted")
+            LOGGER.info("!!!!! lazyassbot has been interrupted")
             break
+
+    # Save the current deque
     with open(HANDLED_FILE, 'wb') as f:
         print "Pickle!"
         pickle.dump(handled, f)
+
     print "Stopped"
 
 if __name__ == '__main__':
