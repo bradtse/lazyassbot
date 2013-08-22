@@ -4,6 +4,7 @@
 login.txt
 logs/
 *.pkl
+.fuse*
 
 #################
 ## Eclipse

@@ -129,6 +129,15 @@ def is_unique(comment):
             current = REDDIT.get_info(thing_id=current.parent_id)
     return True
 
+def get_nearest_url(comment):
+    """ 
+    Returns the first encountered youtube url when recursing up the comment subtree. 
+
+    Hopefully this will account for people posting other videos in comments. 
+    If the first encountered url is not a valid youtube link then this will
+    return None, else 
+    """
+
 def handle_comment(comment):
     """
     Parses through the comment object's text to see if it contains the
