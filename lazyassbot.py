@@ -45,8 +45,8 @@ YT_REGEX = re.compile('^(?:https?://)?(?:www\.)?(?:youtu\.be/|youtube\.com'
 # The URL that is used to get data on a specific Youtube ID
 YT_GDATA = 'http://gdata.youtube.com/feeds/api/videos/{0}?alt=json'
 
-# Matches any kind of link
-# This needs to be fixed to account for more dns names
+# Matches most urls 
+# This needs to be fixed to account for more dns root names
 LINK_REGEX = re.compile('(?:https?://)|(?:www\.)|(?:youtu\.be/|\.com).*?',
                         re.MULTILINE)
 
